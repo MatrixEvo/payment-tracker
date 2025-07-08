@@ -1,13 +1,22 @@
 // service-worker.js
 
-const CACHE_NAME = 'paytrack-v2';
+const CACHE_NAME = 'paytrack-v1.3';
 const FILES_TO_CACHE = [
-  '/',
+  '/',                        // grabs index.html
   '/index.html',
   '/manifest.json',
-  '/script.js',
+  '/assets/js/script.js',
+  '/assets/js/service-worker.js',
+  '/assets/css/styles.min.css',
+  '/assets/css/Navbar-With-Button-icons.css',
+  '/assets/img/favicon-16x16.png',
+  '/assets/img/favicon-32x32.png',
+  '/assets/img/favicon-128x128.png',
+  '/assets/img/favicon-256x256.png',
+  // CDN assets can stay absolute
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
-  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'
+  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js'
 ];
 
 // Install: cache all core assets, but don’t fail on single errors
