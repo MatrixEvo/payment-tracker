@@ -32,40 +32,14 @@
         <div class="d-flex justify-content-between align-items-center mb-3"><button class="btn btn-primary" id="prevMonth" type="button">&lt;</button>
             <h4 id="currentMonth"></h4><button class="btn btn-primary" id="nextMonth" type="button">&gt;</button>
         </div>
-        <div class="d-flex align-items-center flex-wrap"><button class="btn btn-success me-2 mb-2" id="addEntryBtn" type="button">+ Add Entry</button><button class="btn btn-secondary me-2 mb-2" id="addMethodBtn" type="button">+ Add Payment Method</button><button class="btn btn-warning me-2 mb-2" id="exportBtn" type="button">Export Data</button><button class="btn btn-danger me-2 mb-2" id="importBtn" type="button">Import Data</button><input type="file" id="importFileInput" accept=".json" hidden=""></div>
+        <div class="d-flex justify-content-end align-items-center flex-wrap"><button class="btn btn-success me-2 mb-2" id="addEntryBtn" type="button">+ Add Entry</button><button class="btn btn-secondary me-2 mb-2" id="addMethodBtn" type="button">+ Add Payment Method</button></div>
         <div id="methodsContainer"></div>
         <div class="mt-4">
             <h4>Due :&nbsp;<span id="dueAmount">RM 0.00</span></h4>
             <h5>Paid&nbsp; :&nbsp;&nbsp;<span id="paidAmount">RM&nbsp; 0.00</span></h5>
             <h5>Total :&nbsp;&nbsp;<span id="totalAmount">RM&nbsp; 0.00</span></h5>
         </div>
-    </div>
-    <div class="modal fade" role="dialog" tabindex="-1" id="methodModal">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="methodModalLabel">Add Payment Method</h5><button class="btn-close" type="button" aria-label="Close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body"><input type="text" id="methodName" class="form-control" placeholder="Example : Maybank" required=""></div>
-                <div class="modal-footer"><button class="btn btn-primary" id="saveMethod" type="button">Save</button></div>
-            </div>
-        </div>
-    </div>
-    <div class="modal fade" role="dialog" tabindex="-1" id="entryModal">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="entryModalLabel">Add Entry</h5><button class="btn-close" type="button" aria-label="Close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3"><select id="entryMethod" class="form-select" required=""></select></div>
-                    <div class="mb-3"><input type="text" id="entryItem" class="form-control" placeholder="Name" required=""></div>
-                    <div class="mb-3"><input type="number" id="entryAmount" class="form-control" placeholder="Amount" required=""></div>
-                    <div class="mb-3"><input type="number" id="entryDueDay" class="form-control" placeholder="Due Day (1-31)" min="1" max="31" required=""></div>
-                </div>
-                <div class="modal-footer"><button class="btn btn-primary" id="saveEntry" type="button">Save</button></div>
-            </div>
-        </div>
+        <div class="d-flex justify-content-end align-items-center flex-wrap"><button class="btn btn-warning me-2 mb-2" id="exportBtn" type="button">Export Data</button><button class="btn btn-danger me-2 mb-2" id="importBtn" type="button">Import Data</button><input type="file" id="importFileInput" accept=".json" hidden=""></div>
     </div>
     <footer class="text-center bg-body py-4">
         <div class="container">
@@ -86,11 +60,48 @@
             </div>
         </div>
     </footer>
+    <div class="modal fade" role="dialog" tabindex="-1" id="methodModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="methodModalLabel">Add Payment Method</h5><button class="btn-close" type="button" aria-label="Close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Name</h6><input type="text" id="methodName" class="form-control" placeholder="Example : Maybank" required="">
+                </div>
+                <div class="modal-footer"><button class="btn btn-primary" id="saveMethod" type="button">Save</button></div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" role="dialog" tabindex="-1" id="entryModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="entryModalLabel">Add Entry</h5><button class="btn-close" type="button" aria-label="Close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6>Payment Method</h6><select id="entryMethod" class="form-select" required=""></select>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Name</h6><input type="text" id="entryItem" class="form-control" placeholder="Name" required="">
+                    </div>
+                    <div class="mb-3">
+                        <h6>Amount</h6><input type="number" id="entryAmount" class="form-control" placeholder="Amount ( 0.00 )" required="">
+                    </div>
+                    <div class="mb-3">
+                        <h6>Due Day</h6><input type="number" id="entryDueDay" class="form-control" placeholder="Due Day (1-31)" min="1" max="31" required="">
+                    </div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-primary" id="saveEntry" type="button">Save</button></div>
+            </div>
+        </div>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js"></script>
     <script src="assets/js/service-worker.js?h=55643935c32d72967f45bfdfb3f467af"></script>
-    <script src="assets/js/script.js?h=a60008e16f380ec4aa29045cd2bb562a"></script>
+    <script src="assets/js/script.js?h=226f1f1d897ff2da52bba8167ff99ff3"></script>
 </body>
 
 </html>

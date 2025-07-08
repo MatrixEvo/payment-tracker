@@ -29,8 +29,8 @@
 
   // ——— Versioned Lookups ———
   function getVersioned(map = {}, fallback, month) {
-    const ks = Object.keys(map).filter(k => k <= month).sort();
-    return ks.length ? map[ks.pop()] : fallback;
+    const keys = Object.keys(map).filter(k => k <= month).sort();
+    return keys.length ? map[keys.pop()] : fallback;
   }
   const getMethodName = (m, month) => getVersioned(m.names, m.name, month);
   const getAssignment = (e, month) =>
@@ -47,11 +47,10 @@
     const today = new Date().getDate();
 
     $('currentMonth').textContent = formatMonth(current);
-
     const container = $('methodsContainer');
     container.innerHTML = '';
 
-    // No methods
+    // No methods yet
     if (!data.methods.length) {
       $('addEntryBtn').disabled = true;
       container.innerHTML = `
@@ -74,46 +73,57 @@
       grandPaid = 0;
 
     data.methods.forEach(m => {
-      // Gather & sort this method’s entries
+      // collect & sort entries for this method
       const items = data.entries
         .filter(e => getAssignment(e, month) === m.id)
         .sort((a, b) => getOrder(a, month) - getOrder(b, month));
 
-      // Compute subtotals
+      // compute subtotals
       let subTotal = 0,
         subPaid = 0;
       items.forEach(i => {
         subTotal += i.amount;
         if (i.paid?.[month]) subPaid += i.amount;
       });
+      const subDue = subTotal - subPaid;
       grandTotal += subTotal;
       grandPaid += subPaid;
 
-      // Build method card
+      // build card with responsive grid in header
       const card = document.createElement('div');
       card.className = 'card mb-3';
       card.dataset.methodId = m.id;
       card.innerHTML = `
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>${getMethodName(m, month)}</strong>
-          <span>Subtotal: RM${subTotal.toFixed(2)}</span>
-          <div>
-            <button class="btn btn-sm btn-outline-secondary edit-method">Edit</button>
-            <button class="btn btn-sm btn-outline-danger delete-method">Delete</button>
+        <div class="card-header">
+          <div class="row align-items-center">
+            <!-- Name -->
+            <div class="col-12 col-md-auto">
+              <strong>${getMethodName(m, month)}</strong>
+            </div>
+            <!-- Subtotals: on xs each spans full width, on md inline -->
+            <div class="col-12 col-md my-2 my-md-0">
+              <span class="me-3">Due: RM${subDue.toFixed(2)}</span>
+              <span class="me-3">Paid: RM${subPaid.toFixed(2)}</span>
+              <span>Total: RM${subTotal.toFixed(2)}</span>
+            </div>
+            <!-- Actions -->
+            <div class="col-12 col-md-auto text-md-end">
+              <button class="btn btn-sm btn-outline-secondary edit-method">Edit</button>
+              <button class="btn btn-sm btn-outline-danger delete-method">Delete</button>
+            </div>
           </div>
         </div>
         <ul class="list-group list-group-flush"></ul>
       `;
       container.append(card);
 
-      // Attach edit/delete for method
+      // method-level handlers
       card.querySelector('.edit-method').onclick = () =>
         openMethodModal(m.id);
       card.querySelector('.delete-method').onclick = () =>
         deleteMethod(m.id);
 
       const ul = card.querySelector('ul');
-
       if (items.length) {
         items.forEach(i => {
           const li = document.createElement('li');
@@ -122,49 +132,40 @@
           li.dataset.entryId = i.id;
 
           const isPaid = Boolean(i.paid?.[month]);
-          // Highlight if due today or overdue
           if (!isPaid && today >= i.dueDay) {
             li.classList.add('list-group-item-danger');
           }
 
-          // LEFT: checkbox + item + "Due on X"
+          // LEFT: checkbox + item text
           const left = document.createElement('div');
           left.className = 'd-flex align-items-center';
-
           const cb = document.createElement('input');
           cb.type = 'checkbox';
           cb.className = 'form-check-input me-2';
           cb.checked = isPaid;
           cb.onchange = () => togglePaid(i.id);
           left.append(cb);
-
           const itemSpan = document.createElement('span');
           itemSpan.textContent = i.item;
-          if (isPaid)
-            itemSpan.classList.add('text-decoration-line-through');
+          if (isPaid) itemSpan.classList.add('text-decoration-line-through');
           left.append(itemSpan);
-
-          const dueSpan = document.createElement('span');
-          dueSpan.textContent = `Due on ${i.dueDay}`;
-          dueSpan.className = 'badge bg-light text-dark ms-3';
-          left.append(dueSpan);
-
           li.append(left);
 
-          // RIGHT: amount + edit/delete
+          // RIGHT: Due badge + amount + edit/delete
           const right = document.createElement('div');
           right.className = 'd-flex align-items-center';
-
+          const dueSpan = document.createElement('span');
+          dueSpan.textContent = `Due on ${i.dueDay}`;
+          dueSpan.className = 'badge bg-light text-dark me-3';
+          right.append(dueSpan);
           const amt = document.createElement('span');
           amt.textContent = `RM${i.amount.toFixed(2)}`;
           right.append(amt);
-
           const ee = document.createElement('button');
           ee.className = 'btn btn-sm btn-outline-secondary ms-2 me-1';
           ee.textContent = 'Edit';
           ee.onclick = () => openEntryModal(i.id);
           right.append(ee);
-
           const de = document.createElement('button');
           de.className = 'btn btn-sm btn-outline-danger';
           de.textContent = 'Delete';
@@ -179,19 +180,17 @@
       }
     });
 
-    // Update totals footer
+    // update footer totals
     $('totalAmount').textContent = `RM ${grandTotal.toFixed(2)}`;
     $('paidAmount').textContent = `RM ${grandPaid.toFixed(2)}`;
     $('dueAmount').textContent = `RM ${(grandTotal - grandPaid).toFixed(2)}`;
 
-    // Rebuild entry‐method dropdown
+    // rebuild the entry-method <select>
     $('entryMethod').innerHTML = data.methods
-      .map(
-        m => `<option value="${m.id}">${getMethodName(m, month)}</option>`
-      )
+      .map(m => `<option value="${m.id}">${getMethodName(m, month)}</option>`)
       .join('');
 
-    // Re-initialize Sortables
+    // re-init Sortables
     methodSortable?.destroy();
     entrySortables.forEach(s => s.destroy());
     entrySortables = [];
@@ -200,12 +199,8 @@
       animation: 150,
       handle: '.card-header',
       onEnd: () => {
-        const ids = [...container.children].map(
-          c => c.dataset.methodId
-        );
-        data.methods = ids.map(id =>
-          data.methods.find(m => m.id === id)
-        );
+        const ids = [...container.children].map(c => c.dataset.methodId);
+        data.methods = ids.map(id => data.methods.find(m => m.id === id));
         saveData();
         renderAll();
       }
@@ -218,9 +213,7 @@
         onEnd: () => {
           const mon = monthKey(current);
           [...ul.children].forEach((li, idx) => {
-            const e = data.entries.find(
-              x => x.id === li.dataset.entryId
-            );
+            const e = data.entries.find(x => x.id === li.dataset.entryId);
             e.order = e.order || {};
             e.order[mon] = idx;
           });
@@ -241,31 +234,26 @@
     renderAll();
   }
 
-  // ——— Payment Methods CRUD ———
+  // ——— Methods CRUD ———
   function openMethodModal(editId = null) {
-    const isEdit = Boolean(editId);
-    const mon = monthKey(current);
+    const isEdit = Boolean(editId),
+      mon = monthKey(current);
     $('methodModalLabel').textContent = isEdit
       ? 'Edit Payment Method'
       : 'Add Payment Method';
     $('methodName').value = isEdit
-      ? getMethodName(
-          data.methods.find(m => m.id === editId),
-          mon
-        )
+      ? getMethodName(data.methods.find(m => m.id === editId), mon)
       : '';
     delete $('saveMethod').dataset.editId;
     if (isEdit) $('saveMethod').dataset.editId = editId;
     new bootstrap.Modal($('methodModal')).show();
   }
-
   $('addMethodBtn').onclick = () => openMethodModal();
   $('saveMethod').onclick = () => {
     const name = $('methodName').value.trim();
     if (!name) return alert('Name is required');
-    const mon = monthKey(current);
-    const eid = $('saveMethod').dataset.editId;
-
+    const mon = monthKey(current),
+      eid = $('saveMethod').dataset.editId;
     if (
       data.methods.some(
         m =>
@@ -275,7 +263,6 @@
       )
     )
       return alert('This payment method already exists');
-
     if (eid) {
       const m = data.methods.find(m => m.id === eid);
       m.names = m.names || {};
@@ -287,7 +274,6 @@
     renderAll();
     bootstrap.Modal.getInstance($('methodModal')).hide();
   };
-
   function deleteMethod(id) {
     if (!confirm('Delete this method?')) return;
     data.methods = data.methods.filter(m => m.id !== id);
@@ -297,12 +283,10 @@
 
   // ——— Entries CRUD ———
   function openEntryModal(editId = null) {
-    const isEdit = Boolean(editId);
-    const mon = monthKey(current);
+    const isEdit = Boolean(editId),
+      mon = monthKey(current);
     $('entryModalLabel').textContent = isEdit ? 'Edit Entry' : 'Add Entry';
-    ['entryItem', 'entryAmount', 'entryDueDay'].forEach(id =>
-      ($(id).value = '')
-    );
+    ['entryItem', 'entryAmount', 'entryDueDay'].forEach(id => ($(id).value = ''));
     delete $('saveEntry').dataset.editId;
     if (isEdit) {
       const e = data.entries.find(x => x.id === editId);
@@ -314,7 +298,6 @@
     }
     new bootstrap.Modal($('entryModal')).show();
   }
-
   $('addEntryBtn').onclick = () => openEntryModal();
   $('saveEntry').onclick = () => {
     const mon = monthKey(current);
@@ -323,18 +306,16 @@
     const dueDay = parseInt($('entryDueDay').value, 10);
     const methodId = $('entryMethod').value;
     const eid = $('saveEntry').dataset.editId;
-
     if (!item || isNaN(amount) || isNaN(dueDay) || dueDay < 1 || dueDay > 31)
       return alert('All fields required; due day 1–31');
 
-    // Duplicate check
     if (
-      data.entries.some(e => {
-        const same =
+      data.entries.some(e => { 
+        const dup =
           e.item.toLowerCase() === item.toLowerCase() &&
           getAssignment(e, mon) === methodId &&
           e.dueDay === dueDay;
-        return eid ? same && e.id !== eid : same;
+        return eid ? dup && e.id !== eid : dup;
       })
     )
       return alert('This entry already exists for that method & month');
@@ -361,7 +342,6 @@
     renderAll();
     bootstrap.Modal.getInstance($('entryModal')).hide();
   };
-
   function deleteEntry(id) {
     if (!confirm('Delete this entry?')) return;
     data.entries = data.entries.filter(e => e.id !== id);
