@@ -104,11 +104,11 @@
             </div>
             <!-- subtotals -->
             <div class="col-12 col-md my-2 my-md-0">
-              <span class="me-3">Due: RM ${subDue.toFixed(2)}</span>
+              <span class="me-3">Due : RM ${subDue.toFixed(2)}</span>
                 <br>
-              <span class="me-3">Paid: RM ${subPaid.toFixed(2)}</span>
+              <span class="me-3">Paid : RM ${subPaid.toFixed(2)}</span>
                 <br>
-              <span>Total: RM ${subTotal.toFixed(2)}</span>
+              <span>Total : RM ${subTotal.toFixed(2)}</span>
             </div>
             <!-- actions -->
             <div class="col-12 col-md-auto text-md-end">
@@ -176,13 +176,15 @@
 
           const eBtn = document.createElement('button');
           eBtn.className='btn btn-sm btn-outline-secondary ms-2 me-1';
-          eBtn.textContent='Edit';
+          eBtn.title = 'Edit';
+          eBtn.innerHTML = '<i class="bi bi-pencil"></i><span class="d-none d-md-inline"> Edit</span>';
           eBtn.onclick = ()=>openEntryModal(i.id);
           right.append(eBtn);
 
           const dBtn = document.createElement('button');
           dBtn.className='btn btn-sm btn-outline-danger';
-          dBtn.textContent='Delete';
+          dBtn.title = 'Delete';
+          dBtn.innerHTML = '<i class="bi bi-trash"></i><span class="d-none d-md-inline"> Delete</span>';
           dBtn.onclick = ()=>deleteEntry(i.id);
           right.append(dBtn);
 
@@ -314,7 +316,7 @@
     if(!item||isNaN(amount)||isNaN(dueDay)||dueDay<1||dueDay>31)
       return alert('All fields required; due day 1–31');
     if(data.entries.some(e=>{
-      const dup = 
+      const dup =
         e.item.toLowerCase()===item.toLowerCase()&&
         getAssignment(e,mon)===methodId&&
         e.dueDay===dueDay;
@@ -372,8 +374,6 @@
   // ——— Startup & Navigation ———
   window.addEventListener('load',()=>{
     loadData(); renderAll();
-    $('methodModal')?.addEventListener('hide.bs.modal',()=>$('addMethodBtn').focus());
-    $('entryModal')?.addEventListener('hide.bs.modal',()=>$('addEntryBtn').focus());
     if(navigator.serviceWorker) navigator.serviceWorker.register('./assets/js/service-worker.js');
   });
   $('prevMonth').onclick=()=>{
