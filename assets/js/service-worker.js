@@ -1,6 +1,6 @@
 // service-worker.js
 
-const CACHE_NAME = 'paytrack-v1.3';
+const CACHE_NAME = 'paytrack-v1.4';
 const FILES_TO_CACHE = [
   '/',                        // grabs index.html
   '/index.html',

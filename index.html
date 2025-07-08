@@ -27,7 +27,12 @@
     <link rel="stylesheet" href="assets/css/Navbar-With-Button-icons.css?h=befd8a398792e305b7ffd4a176b5b585">
 </head>
 
-<body>
+<body class="bg-primary-subtle bg-gradient">
+    <nav class="navbar navbar-expand-md py-3">
+        <div class="container"><a class="navbar-brand d-flex align-items-center"><span class="bs-icon-sm bs-icon-rounded bs-icon-primary d-flex justify-content-center align-items-center me-2 bs-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" class="bi bi-bank">
+                        <path d="m8 0 6.61 3h.89a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5H15v7a.5.5 0 0 1 .485.38l.5 2a.498.498 0 0 1-.485.62H.5a.498.498 0 0 1-.485-.62l.5-2A.501.501 0 0 1 1 13V6H.5a.5.5 0 0 1-.5-.5v-2A.5.5 0 0 1 .5 3h.89zM3.777 3h8.447L8 1zM2 6v7h1V6zm2 0v7h2.5V6zm3.5 0v7h1V6zm2 0v7H12V6zM13 6v7h1V6zm2-1V4H1v1zm-.39 9H1.39l-.25 1h13.72l-.25-1Z"></path>
+                    </svg></span><span>Payment Tracker</span></a></div>
+    </nav>
     <div class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-3"><button class="btn btn-primary" id="prevMonth" type="button">&lt;</button>
             <h4 id="currentMonth"></h4><button class="btn btn-primary" id="nextMonth" type="button">&gt;</button>
@@ -41,11 +46,11 @@
         </div>
         <div class="d-flex justify-content-end align-items-center flex-wrap"><button class="btn btn-warning me-2 mb-2" id="exportBtn" type="button">Export Data</button><button class="btn btn-danger me-2 mb-2" id="importBtn" type="button">Import Data</button><input type="file" id="importFileInput" accept=".json" hidden=""></div>
     </div>
-    <footer class="text-center bg-body py-4">
+    <footer class="text-center py-4">
         <div class="container">
             <div class="row row-cols-1 row-cols-lg-3">
                 <div class="col">
-                    <p class="text-body my-2">Payment Tracker v1.3</p>
+                    <p class="text-body my-2">Payment Tracker v1.4</p>
                 </div>
                 <div class="col">
                     <ul class="list-inline my-2">
@@ -100,8 +105,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js"></script>
-    <script src="assets/js/service-worker.js?h=e1303918bcf5a0b35499c53342606667"></script>
-    <script src="assets/js/script.js?h=a73d546950e59d0b80836f2bf52d76a1"></script>
+    <script src="assets/js/service-worker.js?h=f0b87b54ad217533da07bfbfcc76c120"></script>
+    <script src="assets/js/script.js?h=14c22d2142aa2796dd8558a877dc1fd2"></script>
 </body>
 
 </html>

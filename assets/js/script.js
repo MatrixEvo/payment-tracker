@@ -104,9 +104,11 @@
             </div>
             <!-- subtotals -->
             <div class="col-12 col-md my-2 my-md-0">
-              <span class="me-3">Due: RM${subDue.toFixed(2)}</span>
-              <span class="me-3">Paid: RM${subPaid.toFixed(2)}</span>
-              <span>Total: RM${subTotal.toFixed(2)}</span>
+              <span class="me-3">Due: RM ${subDue.toFixed(2)}</span>
+                <br>
+              <span class="me-3">Paid: RM ${subPaid.toFixed(2)}</span>
+                <br>
+              <span>Total: RM ${subTotal.toFixed(2)}</span>
             </div>
             <!-- actions -->
             <div class="col-12 col-md-auto text-md-end">
@@ -169,7 +171,7 @@
           right.append(due);
 
           const amt = document.createElement('span');
-          amt.textContent=`RM${i.amount.toFixed(2)}`;
+          amt.textContent=`RM ${i.amount.toFixed(2)}`;
           right.append(amt);
 
           const eBtn = document.createElement('button');
