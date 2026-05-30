@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title>Payment Tracker</title>
+    <meta name="theme-color" content="#0d6efd">
     <link rel="canonical" href="https://track.matrixevo.com/">
     <meta property="og:url" content="https://track.matrixevo.com/">
     <script type="application/ld+json">
@@ -93,7 +94,7 @@
                         <h6>Name</h6><input type="text" id="entryItem" class="form-control" placeholder="Name" required="">
                     </div>
                     <div class="mb-3">
-                        <h6>Amount</h6><input type="number" id="entryAmount" class="form-control" placeholder="Amount ( 0.00 )" required="">
+                        <h6>Amount</h6><input type="number" id="entryAmount" class="form-control" placeholder="Amount ( 0.00 )" min="0" step="0.01" required="">
                     </div>
                     <div class="mb-3">
                         <h6>Due Day</h6><input type="number" id="entryDueDay" class="form-control" placeholder="Due Day (1-31)" min="1" max="31" required="">
