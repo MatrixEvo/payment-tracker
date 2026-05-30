@@ -364,19 +364,24 @@
     saveData(); renderAll();
   }
 
-  // ——— Entries CRUD ———
+// ——— Entries CRUD ———
   function openEntryModal(editId=null){
     const isEdit=Boolean(editId), mon=monthKey(current);
-    $('entryModalLabel').textContent = isEdit?'Edit Entry':'Add Entry';
+    $('entryModalLabel').textContent = isEdit ? 'Edit Entry' : 'Add Entry';
     ['entryItem','entryAmount','entryDueDay'].forEach(id=>$(id).value='');
-    delete $('saveEntry').dataset.editId;
+    
+    // FIX: Target 'entryForm' instead of the deleted 'saveEntry' button
+    delete $('entryForm').dataset.editId;
+    
     if(isEdit){
       const e=data.entries.find(x=>x.id===editId);
       $('entryMethod').value=getAssignment(e,mon);
       $('entryItem').value=e.item;
       $('entryAmount').value=e.amount;
       $('entryDueDay').value=e.dueDay;
-      $('saveEntry').dataset.editId=editId;
+      
+      // FIX: Target 'entryForm' instead of the deleted 'saveEntry' button
+      $('entryForm').dataset.editId=editId;
     }
     new bootstrap.Modal($('entryModal')).show();
   }
