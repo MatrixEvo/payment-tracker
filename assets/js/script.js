@@ -47,9 +47,12 @@
     const ks = Object.keys(map).filter(k => k <= month).sort();
     return ks.length ? map[ks.pop()] : fallback;
   }
+  
   const getMethodName = (m, month) => getVersioned(m.names, m.name, month);
-  const getAssignment = (e, month) =>
-    getVersioned(e.assignments, data.methods[0]?.id || null, month);
+  
+  // FIX: Changed fallback to null. Future entries will not appear in past months.
+  const getAssignment = (e, month) => getVersioned(e.assignments, null, month);
+  
   const getOrder = (e, month) => +getVersioned(e.order, 0, month);
 
   // ——— Sortable refs ———
@@ -87,7 +90,7 @@
     let grandTotal = 0, grandPaid = 0;
 
     data.methods.forEach(m => {
-      // filter & sort entries for this method (excluding deleted ones because m.id won't match "DELETED")
+      // filter & sort entries for this method (excluding deleted/future ones)
       const items = data.entries
         .filter(e => getAssignment(e, mon) === m.id)
         .sort((a, b) => getOrder(a, mon) - getOrder(b, mon));
@@ -147,7 +150,7 @@
 
           const isPaid = Boolean(i.paid?.[mon]);
           
-          // FIX: Smart due day logic for months with 28/30 days
+          // Smart due day logic for months with 28/30 days
           const effectiveDueDay = Math.min(i.dueDay, daysInCurrentMonth);
           if (!isPaid && today >= effectiveDueDay) {
             li.classList.add('list-group-item-danger');
@@ -366,7 +369,7 @@
     bootstrap.Modal.getInstance($('methodModal')).hide();
   };
 
-  // FIX: Guarded Method Deletion (Prevents Data Orphans)
+  // Guarded Method Deletion (Prevents Data Orphans)
   function deleteMethod(id) {
     const hasEntries = data.entries.some(e => Object.values(e.assignments || {}).includes(id));
     
@@ -401,7 +404,7 @@
   
   $('addEntryBtn').onclick = () => openEntryModal();
   
-  // FIX: Form validation event submission + Historical Edit Protection
+  // Form validation event submission + Historical Edit Protection
   $('entryForm').onsubmit = (e) => {
     e.preventDefault(); 
     
@@ -463,7 +466,7 @@
     bootstrap.Modal.getInstance($('entryModal')).hide();
   };
 
-  // FIX: Soft Delete implementation (Preserves historical accounting data)
+  // Soft Delete implementation (Preserves historical accounting data)
   function deleteEntry(id) {
     if (!confirm('Remove this entry for this and future months? (Past records are kept)')) return;
     
@@ -495,7 +498,7 @@
       try {
         const imp = JSON.parse(r.result);
         
-        // FIX: Strict array checking to prevent DB wipe
+        // Strict array checking to prevent DB wipe
         if (!imp || !Array.isArray(imp.methods) || !Array.isArray(imp.entries)) {
           throw new Error('Invalid backup file format. Expected valid PayTrack arrays.');
         }
@@ -515,6 +518,17 @@
   window.addEventListener('load', () => {
     loadData(); renderAll();
     if (navigator.serviceWorker) navigator.serviceWorker.register('./assets/js/service-worker.js');
+    
+    // Ghost data removal (wipes forms clean when closed)
+    $('entryModal').addEventListener('hidden.bs.modal', () => {
+      $('entryForm').reset();
+      delete $('entryForm').dataset.editId;
+    });
+    
+    $('methodModal').addEventListener('hidden.bs.modal', () => {
+      $('methodName').value = '';
+      delete $('saveMethod').dataset.editId;
+    });
   });
   
   $('prevMonth').onclick = () => {
