@@ -202,9 +202,14 @@
     $('dueAmount').textContent = `RM ${(grandTotal-grandPaid).toFixed(2)}`;
 
     // rebuild entry-method dropdown
-    $('entryMethod').innerHTML = data.methods
-      .map(m=>`<option value="${m.id}">${getMethodName(m,mon)}</option>`)
-      .join('');
+    const methodSelect = $('entryMethod');
+    methodSelect.innerHTML = '';
+    data.methods.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = getMethodName(m, mon);
+      methodSelect.appendChild(opt);
+    });
 
     // destroy old sortables
     methodSortable?.destroy();
