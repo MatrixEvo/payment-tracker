@@ -247,13 +247,69 @@
     });
   }
 
-  // ——— Toggle Paid ———
+// ——— Toggle Paid (Optimized) ———
   function togglePaid(id){
     const mon = monthKey(current);
     const e = data.entries.find(x=>x.id===id);
     e.paid = e.paid||{};
     e.paid[mon] = !e.paid[mon];
-    saveData(); renderAll();
+    saveData(); 
+    
+    // 1. Update only the checked item's UI
+    const li = document.querySelector(`li[data-entry-id="${id}"]`);
+    if (li) {
+      const isPaid = e.paid[mon];
+      const textSpan = li.querySelector('div.d-flex.align-items-center > span:last-child');
+      
+      if (isPaid) {
+        textSpan.classList.add('text-decoration-line-through');
+        li.classList.remove('list-group-item-danger');
+      } else {
+        textSpan.classList.remove('text-decoration-line-through');
+        const today = new Date().getDate();
+        if (today >= e.dueDay) li.classList.add('list-group-item-danger');
+      }
+    }
+
+    // 2. Recalculate totals
+    updateTotals(mon);
+  }
+
+  // ——— Helper: Update Totals Without Full Re-render ———
+  function updateTotals(mon) {
+    let grandTotal = 0, grandPaid = 0;
+    
+    data.methods.forEach(m => {
+      const items = data.entries.filter(e => getAssignment(e, mon) === m.id);
+      let subTotal = 0, subPaid = 0;
+      
+      items.forEach(i => {
+        subTotal += i.amount;
+        if (i.paid?.[mon]) subPaid += i.amount;
+      });
+      
+      grandTotal += subTotal;
+      grandPaid += subPaid;
+      
+      // Update method card subtotals
+      const card = document.querySelector(`.card[data-method-id="${m.id}"]`);
+      if (card) {
+        const subDue = subTotal - subPaid;
+        const totalsDiv = card.querySelector('.col-12.col-md.my-2.my-md-0');
+        if (totalsDiv) {
+          totalsDiv.innerHTML = `
+            <span class="me-3">Due : RM ${subDue.toFixed(2)}</span><br>
+            <span class="me-3">Paid : RM ${subPaid.toFixed(2)}</span><br>
+            <span>Total : RM ${subTotal.toFixed(2)}</span>
+          `;
+        }
+      }
+    });
+
+    // Update bottom footer totals
+    $('totalAmount').textContent = `RM ${grandTotal.toFixed(2)}`;
+    $('paidAmount').textContent = `RM ${grandPaid.toFixed(2)}`;
+    $('dueAmount').textContent = `RM ${(grandTotal - grandPaid).toFixed(2)}`;
   }
 
   // ——— Methods CRUD ———
