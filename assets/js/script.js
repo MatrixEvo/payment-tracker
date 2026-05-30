@@ -445,7 +445,9 @@
     r.onload=()=>{
       try {
         const imp=JSON.parse(r.result);
-        if(!imp.methods||!imp.entries) throw new Error('Invalid');
+        if (!imp || !Array.isArray(imp.methods) || !Array.isArray(imp.entries)) {
+          throw new Error('Invalid backup file format. Expected PayTrack data.');
+        }
         if(confirm('Overwrite current data?')){
           data=imp; saveData(); renderAll(); alert('Imported.');
         }
