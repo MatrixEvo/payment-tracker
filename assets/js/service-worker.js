@@ -2,7 +2,7 @@
 
 const CACHE_NAME = 'paytrack-v1.5';
 const FILES_TO_CACHE = [
-  '/',                        // grabs index.html
+  '/',                        
   '/index.html',
   '/manifest.json',
   '/assets/js/script.js',
@@ -13,9 +13,11 @@ const FILES_TO_CACHE = [
   '/assets/img/favicon-32x32.png',
   '/assets/img/favicon-128x128.png',
   '/assets/img/favicon-256x256.png',
-  // CDN assets can stay absolute
+  // Updated to 5.3.6 to match your index.html exactly
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js',
+  // Added Bootstrap Icons for offline support
+  'https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.13.1/font/bootstrap-icons.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js'
 ];
 
