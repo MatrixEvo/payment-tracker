@@ -1,6 +1,12 @@
 // script.js
 (() => {
   // ——— Helpers & Storage ———
+  function escapeHTML(str) {
+  return String(str).replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag]));
+  }
+  
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = 'paytrack';
   let data = { methods: [], entries: [] };
@@ -100,7 +106,7 @@
             </div>
             <!-- name -->
             <div class="col-12 col-md-auto">
-              <strong>${getMethodName(m,mon)}</strong>
+              <strong>${escapeHTML(getMethodName(m,mon))}</strong>
             </div>
             <!-- subtotals -->
             <div class="col-12 col-md my-2 my-md-0">
@@ -134,8 +140,16 @@
           li.dataset.entryId = i.id;
 
           const isPaid = Boolean(i.paid?.[mon]);
-          if(!isPaid && today>=i.dueDay)
+          const currentYear = current.getFullYear();
+          const currentMonthIndex = current.getMonth();
+          const daysInCurrentMonth = new Date(currentYear, currentMonthIndex + 1, 0).getDate();
+          
+          // If the due date is 31, but the month only has 30 days, treat the 30th as the due date
+          const effectiveDueDay = Math.min(i.dueDay, daysInCurrentMonth);
+          
+          if (!isPaid && today >= effectiveDueDay) {
             li.classList.add('list-group-item-danger');
+          }
 
           // left: handle + checkbox + text
           const left = document.createElement('div');
@@ -367,34 +381,40 @@
     new bootstrap.Modal($('entryModal')).show();
   }
   $('addEntryBtn').onclick=()=>openEntryModal();
-  $('saveEntry').onclick=()=>{
-    const mon=monthKey(current),
-          item=$('entryItem').value.trim(),
-          amount=parseFloat($('entryAmount').value),
-          dueDay=parseInt($('entryDueDay').value,10),
-          methodId=$('entryMethod').value,
-          eid=$('saveEntry').dataset.editId;
-    if(!item||isNaN(amount)||isNaN(dueDay)||dueDay<1||dueDay>31)
-      return alert('All fields required; due day 1–31');
-    if(data.entries.some(e=>{
-      const dup =
-        e.item.toLowerCase()===item.toLowerCase()&&
-        getAssignment(e,mon)===methodId&&
-        e.dueDay===dueDay;
-      return eid?dup&&e.id!==eid:dup;
-    })) return alert('This entry already exists for that method & month');
-    if(eid){
-      const e=data.entries.find(x=>x.id===eid);
-      e.item=item; e.amount=amount; e.dueDay=dueDay;
-      e.assignments=e.assignments||{}; e.assignments[mon]=methodId;
+  $('entryForm').onsubmit = (e) => {
+    e.preventDefault(); // Stop page reload
+    
+    const mon = monthKey(current);
+    const item = $('entryItem').value.trim();
+    const amount = parseFloat($('entryAmount').value);
+    const dueDay = parseInt($('entryDueDay').value, 10);
+    const methodId = $('entryMethod').value;
+    // Note: we can't get dataset from a submit event easily, so store editId on the form
+    const eid = $('entryForm').dataset.editId; 
+  
+    if (data.entries.some(ent => {
+      const dup = ent.item.toLowerCase() === item.toLowerCase() &&
+                  getAssignment(ent, mon) === methodId &&
+                  ent.dueDay === dueDay;
+      return eid ? dup && ent.id !== eid : dup;
+    })) {
+      alert('This exact entry already exists for that method & month');
+      return;
+    }
+  
+    if (eid) {
+      const ent = data.entries.find(x => x.id === eid);
+      ent.item = item; ent.amount = amount; ent.dueDay = dueDay;
+      ent.assignments = ent.assignments || {}; 
+      ent.assignments[mon] = methodId;
     } else {
       data.entries.push({
-        id:uuid(),
-        item,amount,dueDay,
-        assignments:{[mon]:methodId},
-        paid:{},order:{}
+        id: uuid(), item, amount, dueDay,
+        assignments: { [mon]: methodId },
+        paid: {}, order: {}
       });
     }
+    
     saveData(); renderAll();
     bootstrap.Modal.getInstance($('entryModal')).hide();
   };
