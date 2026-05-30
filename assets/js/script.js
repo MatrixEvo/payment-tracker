@@ -1,15 +1,16 @@
 // script.js
 (() => {
   // ——— Helpers & Storage ———
-  function escapeHTML(str) {
-  return String(str).replace(/[&<>'"]/g, tag => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    }[tag]));
-  }
-  
   const $ = id => document.getElementById(id);
   const STORAGE_KEY = 'paytrack';
   let data = { methods: [], entries: [] };
+
+  // XSS Prevention Helper
+  function escapeHTML(str) {
+    return String(str).replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag]));
+  }
 
   function loadData() {
     const s = localStorage.getItem(STORAGE_KEY);
@@ -30,28 +31,39 @@
 
   // ——— Date / Month ———
   let current = new Date();
-  const monthKey = d => d.toISOString().slice(0,7);
+  
+  // FIX: Use local time instead of UTC to prevent timezone data shifting
+  const monthKey = d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  };
+  
   const formatMonth = d =>
-    d.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   // ——— Versioned lookups ———
-  function getVersioned(map={}, fallback, month) {
-    const ks = Object.keys(map).filter(k=>k<=month).sort();
+  function getVersioned(map = {}, fallback, month) {
+    const ks = Object.keys(map).filter(k => k <= month).sort();
     return ks.length ? map[ks.pop()] : fallback;
   }
-  const getMethodName = (m,month)=> getVersioned(m.names,m.name,month);
-  const getAssignment = (e,month)=>
-    getVersioned(e.assignments, data.methods[0]?.id||null, month);
-  const getOrder = (e,month)=> +getVersioned(e.order,0,month);
+  const getMethodName = (m, month) => getVersioned(m.names, m.name, month);
+  const getAssignment = (e, month) =>
+    getVersioned(e.assignments, data.methods[0]?.id || null, month);
+  const getOrder = (e, month) => +getVersioned(e.order, 0, month);
 
   // ——— Sortable refs ———
   let methodSortable = null,
       entrySortables = [];
 
   // ——— Render everything ———
-  function renderAll(){
-    const mon = monthKey(current),
-          today = new Date().getDate();
+  function renderAll() {
+    const mon = monthKey(current);
+    const today = new Date().getDate();
+    const currentYear = current.getFullYear();
+    const currentMonthIndex = current.getMonth();
+    const daysInCurrentMonth = new Date(currentYear, currentMonthIndex + 1, 0).getDate();
+
     $('currentMonth').textContent = formatMonth(current);
 
     const c = $('methodsContainer');
@@ -64,59 +76,53 @@
           No payment methods yet.<br>
           Click <strong>Add Payment Method</strong> to get started!
         </div>`;
-      ['totalAmount','paidAmount','dueAmount']
-        .forEach(id=>$(id).textContent='RM 0.00');
+      ['totalAmount', 'paidAmount', 'dueAmount'].forEach(id => $(id).textContent = 'RM 0.00');
       methodSortable?.destroy();
-      entrySortables.forEach(s=>s.destroy());
+      entrySortables.forEach(s => s.destroy());
       return;
     }
+    
     $('addEntryBtn').disabled = false;
 
-    let grandTotal=0, grandPaid=0;
+    let grandTotal = 0, grandPaid = 0;
 
-    data.methods.forEach(m=>{
-      // filter & sort entries for this method
+    data.methods.forEach(m => {
+      // filter & sort entries for this method (excluding deleted ones because m.id won't match "DELETED")
       const items = data.entries
-        .filter(e=>getAssignment(e,mon)===m.id)
-        .sort((a,b)=>getOrder(a,mon)-getOrder(b,mon));
+        .filter(e => getAssignment(e, mon) === m.id)
+        .sort((a, b) => getOrder(a, mon) - getOrder(b, mon));
 
       // compute subtotals
-      let subTotal=0, subPaid=0;
-      items.forEach(i=>{
-        subTotal+=i.amount;
-        if(i.paid?.[mon]) subPaid+=i.amount;
+      let subTotal = 0, subPaid = 0;
+      items.forEach(i => {
+        subTotal += i.amount;
+        if (i.paid?.[mon]) subPaid += i.amount;
       });
-      const subDue = subTotal-subPaid;
-      grandTotal+=subTotal;
-      grandPaid+=subPaid;
+      const subDue = subTotal - subPaid;
+      grandTotal += subTotal;
+      grandPaid += subPaid;
 
       // build card
       const card = document.createElement('div');
-      card.className='card mb-3';
-      card.dataset.methodId=m.id;
-      card.innerHTML=`
+      card.className = 'card mb-3';
+      card.dataset.methodId = m.id;
+      
+      card.innerHTML = `
         <div class="card-header">
           <div class="row align-items-center">
-            <!-- handle -->
             <div class="col-auto pe-2">
-              <span
-                class="drag-handle-method"
-                style="cursor:grab; font-size:1.2rem;"
-              >≡</span>
+              <span class="drag-handle-method" style="cursor:grab; font-size:1.2rem;">≡</span>
             </div>
-            <!-- name -->
             <div class="col-12 col-md-auto">
-              <strong>${escapeHTML(getMethodName(m,mon))}</strong>
+              <strong>${escapeHTML(getMethodName(m, mon))}</strong>
             </div>
-            <!-- subtotals -->
-            <div class="col-12 col-md my-2 my-md-0">
+            <div class="col-12 col-md my-2 my-md-0 method-totals">
               <span class="me-3">Due : RM ${subDue.toFixed(2)}</span>
                 <br>
               <span class="me-3">Paid : RM ${subPaid.toFixed(2)}</span>
                 <br>
               <span>Total : RM ${subTotal.toFixed(2)}</span>
             </div>
-            <!-- actions -->
             <div class="col-12 col-md-auto text-md-end">
               <button class="btn btn-sm btn-outline-secondary edit-method">Edit</button>
               <button class="btn btn-sm btn-outline-danger delete-method">Delete</button>
@@ -128,78 +134,74 @@
       c.append(card);
 
       // method handlers
-      card.querySelector('.edit-method').onclick = ()=>openMethodModal(m.id);
-      card.querySelector('.delete-method').onclick = ()=>deleteMethod(m.id);
+      card.querySelector('.edit-method').onclick = () => openMethodModal(m.id);
+      card.querySelector('.delete-method').onclick = () => deleteMethod(m.id);
 
       // fill entries
       const ul = card.querySelector('ul');
-      if(items.length){
-        items.forEach(i=>{
+      if (items.length) {
+        items.forEach(i => {
           const li = document.createElement('li');
-          li.className='list-group-item d-flex justify-content-between align-items-center';
+          li.className = 'list-group-item d-flex justify-content-between align-items-center';
           li.dataset.entryId = i.id;
 
           const isPaid = Boolean(i.paid?.[mon]);
-          const currentYear = current.getFullYear();
-          const currentMonthIndex = current.getMonth();
-          const daysInCurrentMonth = new Date(currentYear, currentMonthIndex + 1, 0).getDate();
           
-          // If the due date is 31, but the month only has 30 days, treat the 30th as the due date
+          // FIX: Smart due day logic for months with 28/30 days
           const effectiveDueDay = Math.min(i.dueDay, daysInCurrentMonth);
-          
           if (!isPaid && today >= effectiveDueDay) {
             li.classList.add('list-group-item-danger');
           }
 
           // left: handle + checkbox + text
           const left = document.createElement('div');
-          left.className='d-flex align-items-center';
+          left.className = 'd-flex align-items-center';
 
           const h2 = document.createElement('span');
-          h2.className='drag-handle-entry me-2';
-          h2.style.cursor='grab';
-          h2.textContent='≡';
+          h2.className = 'drag-handle-entry me-2';
+          h2.style.cursor = 'grab';
+          h2.textContent = '≡';
           left.append(h2);
 
           const cb = document.createElement('input');
-          cb.type='checkbox';
-          cb.className='form-check-input me-2';
+          cb.type = 'checkbox';
+          cb.className = 'form-check-input me-2';
           cb.checked = isPaid;
-          cb.onchange = ()=>togglePaid(i.id);
+          cb.onchange = () => togglePaid(i.id);
           left.append(cb);
 
           const txt = document.createElement('span');
-          txt.textContent = i.item;
-          if(isPaid) txt.classList.add('text-decoration-line-through');
+          txt.textContent = i.item; // XSS safe text content
+          if (isPaid) txt.classList.add('text-decoration-line-through');
           left.append(txt);
 
           li.append(left);
 
           // right: due badge + amount + buttons
           const right = document.createElement('div');
-          right.className='d-flex align-items-center';
+          right.className = 'd-flex align-items-center';
 
           const due = document.createElement('span');
-          due.className='badge bg-light text-dark me-3';
+          due.className = 'badge bg-light text-dark me-3';
           due.textContent = `Due on ${i.dueDay}`;
           right.append(due);
 
           const amt = document.createElement('span');
-          amt.textContent=`RM ${i.amount.toFixed(2)}`;
+          amt.textContent = `RM ${i.amount.toFixed(2)}`;
           right.append(amt);
 
           const eBtn = document.createElement('button');
-          eBtn.className='btn btn-sm btn-outline-secondary ms-2 me-1';
+          eBtn.className = 'btn btn-sm btn-outline-secondary ms-2 me-1';
           eBtn.title = 'Edit';
           eBtn.innerHTML = '<i class="bi bi-pencil"></i><span class="d-none d-md-inline"> Edit</span>';
-          eBtn.onclick = ()=>openEntryModal(i.id);
+          eBtn.onclick = () => openEntryModal(i.id);
           right.append(eBtn);
 
           const dBtn = document.createElement('button');
-          dBtn.className='btn btn-sm btn-outline-danger';
+          dBtn.className = 'btn btn-sm btn-outline-danger';
           dBtn.title = 'Delete';
           dBtn.innerHTML = '<i class="bi bi-trash"></i><span class="d-none d-md-inline"> Delete</span>';
-          dBtn.onclick = ()=>deleteEntry(i.id);
+          dBtn.onclick = () => deleteEntry(i.id);
           right.append(dBtn);
 
           li.append(right);
@@ -213,9 +215,9 @@
     // footer totals
     $('totalAmount').textContent = `RM ${grandTotal.toFixed(2)}`;
     $('paidAmount').textContent = `RM ${grandPaid.toFixed(2)}`;
-    $('dueAmount').textContent = `RM ${(grandTotal-grandPaid).toFixed(2)}`;
+    $('dueAmount').textContent = `RM ${(grandTotal - grandPaid).toFixed(2)}`;
 
-    // rebuild entry-method dropdown
+    // Rebuild entry-method dropdown safely (XSS protection)
     const methodSelect = $('entryMethod');
     methodSelect.innerHTML = '';
     data.methods.forEach(m => {
@@ -227,31 +229,31 @@
 
     // destroy old sortables
     methodSortable?.destroy();
-    entrySortables.forEach(s=>s.destroy());
-    entrySortables=[];
+    entrySortables.forEach(s => s.destroy());
+    entrySortables = [];
 
-    // re-init method drag-and-drop (only on the ≡ handle)
+    // re-init method drag-and-drop
     methodSortable = Sortable.create(c, {
       animation: 150,
       handle: '.drag-handle-method',
       onEnd: () => {
-        const ids = [...c.children].map(ch=>ch.dataset.methodId);
-        data.methods = ids.map(id=>data.methods.find(m=>m.id===id));
+        const ids = [...c.children].map(ch => ch.dataset.methodId);
+        data.methods = ids.map(id => data.methods.find(m => m.id === id));
         saveData();
         renderAll();
       }
     });
 
-    // re-init entry drag-and-drop (only on the ≡ handle)
-    c.querySelectorAll('ul').forEach(ul=>{
+    // re-init entry drag-and-drop
+    c.querySelectorAll('ul').forEach(ul => {
       const s = Sortable.create(ul, {
         animation: 150,
         handle: '.drag-handle-entry',
         onEnd: () => {
           const mon2 = monthKey(current);
-          [...ul.children].forEach((li,idx)=>{
-            const e = data.entries.find(x=>x.id===li.dataset.entryId);
-            e.order = e.order||{};
+          [...ul.children].forEach((li, idx) => {
+            const e = data.entries.find(x => x.id === li.dataset.entryId);
+            e.order = e.order || {};
             e.order[mon2] = idx;
           });
           saveData();
@@ -261,15 +263,15 @@
     });
   }
 
-// ——— Toggle Paid (Optimized) ———
-  function togglePaid(id){
+  // ——— Toggle Paid (Optimized) ———
+  function togglePaid(id) {
     const mon = monthKey(current);
-    const e = data.entries.find(x=>x.id===id);
-    e.paid = e.paid||{};
+    const e = data.entries.find(x => x.id === id);
+    e.paid = e.paid || {};
     e.paid[mon] = !e.paid[mon];
-    saveData(); 
-    
-    // 1. Update only the checked item's UI
+    saveData();
+
+    // Update only the checked item's UI instead of full re-render
     const li = document.querySelector(`li[data-entry-id="${id}"]`);
     if (li) {
       const isPaid = e.paid[mon];
@@ -280,12 +282,17 @@
         li.classList.remove('list-group-item-danger');
       } else {
         textSpan.classList.remove('text-decoration-line-through');
+        
         const today = new Date().getDate();
-        if (today >= e.dueDay) li.classList.add('list-group-item-danger');
+        const currentYear = current.getFullYear();
+        const currentMonthIndex = current.getMonth();
+        const daysInCurrentMonth = new Date(currentYear, currentMonthIndex + 1, 0).getDate();
+        const effectiveDueDay = Math.min(e.dueDay, daysInCurrentMonth);
+
+        if (today >= effectiveDueDay) li.classList.add('list-group-item-danger');
       }
     }
 
-    // 2. Recalculate totals
     updateTotals(mon);
   }
 
@@ -305,11 +312,10 @@
       grandTotal += subTotal;
       grandPaid += subPaid;
       
-      // Update method card subtotals
       const card = document.querySelector(`.card[data-method-id="${m.id}"]`);
       if (card) {
         const subDue = subTotal - subPaid;
-        const totalsDiv = card.querySelector('.col-12.col-md.my-2.my-md-0');
+        const totalsDiv = card.querySelector('.method-totals');
         if (totalsDiv) {
           totalsDiv.innerHTML = `
             <span class="me-3">Due : RM ${subDue.toFixed(2)}</span><br>
@@ -320,83 +326,92 @@
       }
     });
 
-    // Update bottom footer totals
     $('totalAmount').textContent = `RM ${grandTotal.toFixed(2)}`;
     $('paidAmount').textContent = `RM ${grandPaid.toFixed(2)}`;
     $('dueAmount').textContent = `RM ${(grandTotal - grandPaid).toFixed(2)}`;
   }
 
   // ——— Methods CRUD ———
-  function openMethodModal(editId=null){
-    const isEdit=Boolean(editId), mon=monthKey(current);
-    $('methodModalLabel').textContent = isEdit
-      ? 'Edit Payment Method'
-      : 'Add Payment Method';
-    $('methodName').value = isEdit
-      ? getMethodName(data.methods.find(m=>m.id===editId),mon)
-      : '';
+  function openMethodModal(editId = null) {
+    const isEdit = Boolean(editId), mon = monthKey(current);
+    $('methodModalLabel').textContent = isEdit ? 'Edit Payment Method' : 'Add Payment Method';
+    $('methodName').value = isEdit ? getMethodName(data.methods.find(m => m.id === editId), mon) : '';
+    
     delete $('saveMethod').dataset.editId;
-    if(isEdit) $('saveMethod').dataset.editId=editId;
+    if (isEdit) $('saveMethod').dataset.editId = editId;
+    
     new bootstrap.Modal($('methodModal')).show();
   }
-  $('addMethodBtn').onclick=()=>openMethodModal();
-  $('saveMethod').onclick=()=>{
-    const name=$('methodName').value.trim();
-    if(!name) return alert('Name is required');
-    const mon=monthKey(current), eid=$('saveMethod').dataset.editId;
-    if(data.methods.some(m=>
-      m.id!==eid &&
-      getVersioned(m.names,m.name,mon).toLowerCase()===name.toLowerCase()
+  
+  $('addMethodBtn').onclick = () => openMethodModal();
+  
+  $('saveMethod').onclick = () => {
+    const name = $('methodName').value.trim();
+    if (!name) return alert('Name is required');
+    const mon = monthKey(current), eid = $('saveMethod').dataset.editId;
+    
+    if (data.methods.some(m => 
+      m.id !== eid && 
+      getVersioned(m.names, m.name, mon).toLowerCase() === name.toLowerCase()
     )) return alert('This payment method already exists');
-    if(eid){
-      const m=data.methods.find(m=>m.id===eid);
-      m.names=m.names||{};
-      m.names[mon]=name;
+    
+    if (eid) {
+      const m = data.methods.find(m => m.id === eid);
+      m.names = m.names || {};
+      m.names[mon] = name;
     } else {
-      data.methods.push({id:uuid(),name,names:{}});
+      data.methods.push({ id: uuid(), name, names: {} });
     }
     saveData(); renderAll();
     bootstrap.Modal.getInstance($('methodModal')).hide();
   };
-  function deleteMethod(id){
-    if(!confirm('Delete this method?')) return;
-    data.methods=data.methods.filter(m=>m.id!==id);
+
+  // FIX: Guarded Method Deletion (Prevents Data Orphans)
+  function deleteMethod(id) {
+    const hasEntries = data.entries.some(e => Object.values(e.assignments || {}).includes(id));
+    
+    if (hasEntries) {
+      alert("Cannot delete this payment method because it contains historical entries. Rename it instead.");
+      return;
+    }
+
+    if (!confirm('Delete this empty method?')) return;
+    data.methods = data.methods.filter(m => m.id !== id);
     saveData(); renderAll();
   }
 
-// ——— Entries CRUD ———
-  function openEntryModal(editId=null){
-    const isEdit=Boolean(editId), mon=monthKey(current);
+  // ——— Entries CRUD ———
+  function openEntryModal(editId = null) {
+    const isEdit = Boolean(editId), mon = monthKey(current);
     $('entryModalLabel').textContent = isEdit ? 'Edit Entry' : 'Add Entry';
-    ['entryItem','entryAmount','entryDueDay'].forEach(id=>$(id).value='');
+    ['entryItem', 'entryAmount', 'entryDueDay'].forEach(id => $(id).value = '');
     
-    // FIX: Target 'entryForm' instead of the deleted 'saveEntry' button
     delete $('entryForm').dataset.editId;
     
-    if(isEdit){
-      const e=data.entries.find(x=>x.id===editId);
-      $('entryMethod').value=getAssignment(e,mon);
-      $('entryItem').value=e.item;
-      $('entryAmount').value=e.amount;
-      $('entryDueDay').value=e.dueDay;
-      
-      // FIX: Target 'entryForm' instead of the deleted 'saveEntry' button
-      $('entryForm').dataset.editId=editId;
+    if (isEdit) {
+      const e = data.entries.find(x => x.id === editId);
+      $('entryMethod').value = getAssignment(e, mon);
+      $('entryItem').value = e.item;
+      $('entryAmount').value = e.amount;
+      $('entryDueDay').value = e.dueDay;
+      $('entryForm').dataset.editId = editId;
     }
     new bootstrap.Modal($('entryModal')).show();
   }
-  $('addEntryBtn').onclick=()=>openEntryModal();
+  
+  $('addEntryBtn').onclick = () => openEntryModal();
+  
+  // FIX: Form validation event submission + Historical Edit Protection
   $('entryForm').onsubmit = (e) => {
-    e.preventDefault(); // Stop page reload
+    e.preventDefault(); 
     
     const mon = monthKey(current);
     const item = $('entryItem').value.trim();
     const amount = parseFloat($('entryAmount').value);
     const dueDay = parseInt($('entryDueDay').value, 10);
     const methodId = $('entryMethod').value;
-    // Note: we can't get dataset from a submit event easily, so store editId on the form
     const eid = $('entryForm').dataset.editId; 
-  
+
     if (data.entries.some(ent => {
       const dup = ent.item.toLowerCase() === item.toLowerCase() &&
                   getAssignment(ent, mon) === methodId &&
@@ -406,13 +421,37 @@
       alert('This exact entry already exists for that method & month');
       return;
     }
-  
+
     if (eid) {
       const ent = data.entries.find(x => x.id === eid);
-      ent.item = item; ent.amount = amount; ent.dueDay = dueDay;
-      ent.assignments = ent.assignments || {}; 
-      ent.assignments[mon] = methodId;
+      const isCoreChange = ent.amount !== amount || ent.item !== item || ent.dueDay !== dueDay;
+
+      if (isCoreChange) {
+        // 1. Archive the old entry starting from this month
+        ent.assignments = ent.assignments || {};
+        ent.assignments[mon] = "DELETED";
+        
+        // Carry over the "paid" status to the new clone if they already checked it this month
+        const newPaidStatus = {};
+        if (ent.paid && ent.paid[mon]) {
+            newPaidStatus[mon] = true;
+            ent.paid[mon] = false; 
+        }
+
+        // 2. Create a new cloned entry starting this month with the new values
+        data.entries.push({
+          id: uuid(), item, amount, dueDay,
+          assignments: { [mon]: methodId },
+          paid: newPaidStatus, 
+          order: {}
+        });
+      } else {
+        // Just updating the payment method version
+        ent.assignments = ent.assignments || {}; 
+        ent.assignments[mon] = methodId;
+      }
     } else {
+      // Create brand new entry
       data.entries.push({
         id: uuid(), item, amount, dueDay,
         assignments: { [mon]: methodId },
@@ -423,51 +462,66 @@
     saveData(); renderAll();
     bootstrap.Modal.getInstance($('entryModal')).hide();
   };
-  function deleteEntry(id){
-    if(!confirm('Delete this entry?')) return;
-    data.entries = data.entries.filter(e=>e.id!==id);
+
+  // FIX: Soft Delete implementation (Preserves historical accounting data)
+  function deleteEntry(id) {
+    if (!confirm('Remove this entry for this and future months? (Past records are kept)')) return;
+    
+    const mon = monthKey(current);
+    const e = data.entries.find(x => x.id === id);
+    
+    e.assignments = e.assignments || {};
+    e.assignments[mon] = "DELETED"; 
+    
     saveData(); renderAll();
   }
 
   // ——— Export / Import ———
-  $('exportBtn').onclick=()=>{
-    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download=`backup-${monthKey(new Date())}.json`;
+  $('exportBtn').onclick = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `backup-${monthKey(new Date())}.json`;
     a.click();
   };
-  $('importBtn').onclick=()=>$('importFileInput').click();
-  $('importFileInput').addEventListener('change',e=>{
-    const f=e.target.files[0];
-    if(!f) return;
-    const r=new FileReader();
-    r.onload=()=>{
+  
+  $('importBtn').onclick = () => $('importFileInput').click();
+  
+  $('importFileInput').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
       try {
-        const imp=JSON.parse(r.result);
+        const imp = JSON.parse(r.result);
+        
+        // FIX: Strict array checking to prevent DB wipe
         if (!imp || !Array.isArray(imp.methods) || !Array.isArray(imp.entries)) {
-          throw new Error('Invalid backup file format. Expected PayTrack data.');
+          throw new Error('Invalid backup file format. Expected valid PayTrack arrays.');
         }
-        if(confirm('Overwrite current data?')){
-          data=imp; saveData(); renderAll(); alert('Imported.');
+        
+        if (confirm('Overwrite current data?')) {
+          data = imp; saveData(); renderAll(); alert('Imported.');
         }
-      } catch(err){
-        alert('Import failed: '+err.message);
+      } catch (err) {
+        alert('Import failed: ' + err.message);
       }
     };
     r.readAsText(f);
-    e.target.value='';
+    e.target.value = '';
   });
 
   // ——— Startup & Navigation ———
-  window.addEventListener('load',()=>{
+  window.addEventListener('load', () => {
     loadData(); renderAll();
-    if(navigator.serviceWorker) navigator.serviceWorker.register('./assets/js/service-worker.js');
+    if (navigator.serviceWorker) navigator.serviceWorker.register('./assets/js/service-worker.js');
   });
-  $('prevMonth').onclick=()=>{
-    current.setMonth(current.getMonth()-1); renderAll();
+  
+  $('prevMonth').onclick = () => {
+    current.setMonth(current.getMonth() - 1); renderAll();
   };
-  $('nextMonth').onclick=()=>{
-    current.setMonth(current.getMonth()+1); renderAll();
+  
+  $('nextMonth').onclick = () => {
+    current.setMonth(current.getMonth() + 1); renderAll();
   };
 })();
